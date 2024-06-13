@@ -24,7 +24,11 @@ public class AnswerData : MonoBehaviour
         {
             if(_rect == null)
             {
-                _rect = GetComponent<RectTransform>() ?? gameObject.AddComponent<RectTransform>();
+                _rect = GetComponent<RectTransform>();
+                if (_rect == null)
+                {
+                    _rect = gameObject.AddComponent<RectTransform>();
+                }
             }
             return _rect;
         }
@@ -51,17 +55,15 @@ public class AnswerData : MonoBehaviour
         Checked = !Checked;
         UpdateUI();
 
-        if(events.UpdateQuestionAnswer != null){
-            events.UpdateQuestionAnswer(this);
-        }
+        events.UpdateQuestionAnswer?.Invoke(this);
 
     }
 
-    public void UpdateUI()
+    private void UpdateUI()
     {
         if(toggle == null){
             return;
         }
-        toggle.sprite = (Checked) ? checkedToggle : uncheckedToggle;
+        toggle.sprite = Checked ? checkedToggle : uncheckedToggle;
     }
 }

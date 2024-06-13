@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement; //Für das Beenden und Wiederholen
 public class GameManager : MonoBehaviour
 {
     private Question[] _questions = null;
-    public Question[] Questions {get {return _questions; } }
+    private Question[] Questions {get {return _questions; } }
 
     [SerializeField] GameEvent events = null;
 
@@ -18,7 +18,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] Color timerAlmostOutColor = Color.red;
 
     private List<AnswerData> PickedAnswers = new List<AnswerData>();
-    private List<int> FinishedQuestions = new List<int>();
+    private readonly List<int> FinishedQuestions = new List<int>();
     private int currentQuestion = 0;
     private int timerStateParaHash = 0;
     private IEnumerator IE_WaitTillNextRound = null;
@@ -28,7 +28,7 @@ public class GameManager : MonoBehaviour
     private bool isFinished
     {
         get{
-            return (FinishedQuestions.Count < Questions.Length) ? false : true;
+            return FinishedQuestions.Count >= Questions.Length;
         }
     }
 
@@ -63,10 +63,12 @@ public class GameManager : MonoBehaviour
         Display();
     }
 
-    public void UpdateAnswers(AnswerData newAnswer)
+    private void UpdateAnswers(AnswerData newAnswer)
     {
-        if(Questions[currentQuestion].GetAnswerType == Question.AnswerType.Single)
+        if (Questions[currentQuestion].GetAnswerType != Question.AnswerType.Single)
         {
+            return;
+        }
             //Singlechoice-Block
             foreach(var answer in PickedAnswers)
             {
@@ -77,7 +79,7 @@ public class GameManager : MonoBehaviour
                 PickedAnswers.Clear();
                 PickedAnswers.Add(newAnswer);
             }
-        }
+        
         /*else //der ganze else-Block hier ist für Multiple-choice, was ich nicht
         //habe deshalb werde ich es später auskommentieren/löschen
         {
@@ -93,7 +95,7 @@ public class GameManager : MonoBehaviour
         }*/
     }
 
-    public void EraseAnswers()
+    private void EraseAnswers()
     {
         PickedAnswers = new List<AnswerData>();
     }
@@ -123,29 +125,29 @@ public class GameManager : MonoBehaviour
         bool isCorrect = CheckAnswers();
         FinishedQuestions.Add(currentQuestion);
 
-        UpdateScore((isCorrect) ? Questions[currentQuestion].AddScore : -Questions[currentQuestion].AddScore);
+        UpdateScore(isCorrect ? Questions[currentQuestion].AddScore : -Questions[currentQuestion].AddScore);
 
         if(isFinished)
         {
             SetHighscore();
         }
 
-        var type = (isFinished) ? UIManager.ResolutionScreenType.Finish : (isCorrect) ? UIManager.ResolutionScreenType.Correct : UIManager.ResolutionScreenType.Incorrect;
+        var type = isFinished ? UIManager.ResolutionScreenType.Finish : isCorrect ? UIManager.ResolutionScreenType.Correct : UIManager.ResolutionScreenType.Incorrect;
+        
+        events.DisplayResolutionScreen?.Invoke(type, Questions[currentQuestion].AddScore);
 
-        if(events.DisplayResolutionScreen != null)
+        if (type == UIManager.ResolutionScreenType.Finish)
         {
-            events.DisplayResolutionScreen(type, Questions[currentQuestion].AddScore);
+            return;
         }
-
-        if(type != UIManager.ResolutionScreenType.Finish)
+        
+        if(IE_WaitTillNextRound != null)
         {
-            if(IE_WaitTillNextRound != null)
-            {
-                StopCoroutine(IE_WaitTillNextRound);
-            }   
-            IE_WaitTillNextRound = WaitTillNextRound();
-            StartCoroutine(IE_WaitTillNextRound);
-        }
+            StopCoroutine(IE_WaitTillNextRound);
+        }   
+        IE_WaitTillNextRound = WaitTillNextRound();
+        StartCoroutine(IE_WaitTillNextRound);
+        
     }
 
     void UpdateTimer(bool state)
@@ -212,41 +214,43 @@ public class GameManager : MonoBehaviour
     {
         var random = 0;
 
-        if(FinishedQuestions.Count < Questions.Length)
+        if (FinishedQuestions.Count >= Questions.Length)
         {
-            do //Falls der Index in den Fragen enthalten ist und es nicht die gleiche Frage ist, wird die Schleife wieder ausgeführt
-            //und eine weitere Frage wird verwendet.
-            {
-                random = UnityEngine.Random.Range(0, Questions.Length);
-            }while(FinishedQuestions.Contains(random) || random == currentQuestion);
+            return random;
         }
+        
+        do //Falls der Index in den Fragen enthalten ist und es nicht die gleiche Frage ist, wird die Schleife wieder ausgeführt
+        //und eine weitere Frage wird verwendet.
+        {
+            random = UnityEngine.Random.Range(0, Questions.Length);
+        }while(FinishedQuestions.Contains(random) || random == currentQuestion);
+        
         return random;
     }
 
     bool CheckAnswers ()
     {
-        if(!CompareAnswers())
-        {
-            return false;
-        }
-        return true;
+        return CompareAnswers();
     }
 
     bool CompareAnswers ()
     {
-        if(PickedAnswers.Count > 0)
+        if (PickedAnswers.Count == 0)
         {
-            //List für die korrekten Antworten
-            List<int> c = Questions[currentQuestion].GetCorrectAnswers();
-            //Liste der ausgewählten Antworten
-            List<int> p = PickedAnswers.Select(x => x.AnswerIndex).ToList();
-
-            var f = c.Except(p).ToList(); //Alles außer das in der Klammer
-            var s = p.Except(c).ToList();
-
-            return !f.Any() && !s.Any(); //wenn beide Listen was enthalten dann returnen wir
-            //true ansonsten false 
+            return false;
         }
+        
+        //List für die korrekten Antworten
+        List<int> c = Questions[currentQuestion].GetCorrectAnswers();
+        //Liste der ausgewählten Antworten
+        List<int> p = PickedAnswers.Select(x => x.AnswerIndex).ToList();
+
+        var f = c.Except(p).ToList(); //Alles außer das in der Klammer
+        var s = p.Except(c).ToList();
+
+        return !f.Any() && !s.Any(); //wenn beide Listen was enthalten dann returnen wir
+        //true ansonsten false 
+        
         return false;
     }
 
@@ -283,9 +287,6 @@ public class GameManager : MonoBehaviour
     {
         events.CurrentFinalScore += add;
 
-        if(events.ScoreUpdated != null)
-        {
-            events.ScoreUpdated();
-        }
+        events.ScoreUpdated?.Invoke();
     }
 }

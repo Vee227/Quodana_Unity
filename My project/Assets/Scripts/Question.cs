@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System;
 using UnityEngine;
 
-[Serializable()]
+[Serializable]
 public struct Answer{
      [SerializeField] private string _info;
     public string Info{get {return _info;}}

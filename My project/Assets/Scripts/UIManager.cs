@@ -5,7 +5,7 @@ using System;
 using TMPro;
 using UnityEngine.UI;
 
-[Serializable()]
+[Serializable]
 public struct UIManagerParameters
 {
     [Header("Answers Options")]
@@ -21,7 +21,7 @@ public struct UIManagerParameters
     public Color FinalBGColor {get {return finalBGColor; }}
 }
 
-[Serializable()]
+[Serializable]
 public struct UIElements
 {
     [SerializeField] RectTransform answersContentArea;
@@ -62,7 +62,7 @@ public class UIManager : MonoBehaviour
     [Space]
     [SerializeField] UIManagerParameters parameters = new UIManagerParameters();
 
-    private List<AnswerData> currentAnswer = new List<AnswerData>();
+    private readonly List<AnswerData> currentAnswer = new List<AnswerData>();
     private int resStateParaHash = 0;
 
     private IEnumerator IE_DisplayTimeResolution = null;
@@ -99,15 +99,18 @@ public class UIManager : MonoBehaviour
         uIElements.ResolutionScreenAnimator.SetInteger(resStateParaHash, 2);
         uIElements.MainCanvasGroup.blocksRaycasts = false;
 
-        if(type != ResolutionScreenType.Finish)
+        if (type == ResolutionScreenType.Finish)
         {
-            if(IE_DisplayTimeResolution != null)
-            {
-                StopCoroutine(IE_DisplayTimeResolution);
-            }
-            IE_DisplayTimeResolution = DisplayTimeResolution();
-            StartCoroutine(IE_DisplayTimeResolution);
+            return;
         }
+        
+        if(IE_DisplayTimeResolution != null)
+        {
+            StopCoroutine(IE_DisplayTimeResolution);
+        }
+        IE_DisplayTimeResolution = DisplayTimeResolution();
+        StartCoroutine(IE_DisplayTimeResolution);
+        
     }
 
     IEnumerator DisplayTimeResolution ()
@@ -138,7 +141,7 @@ public class UIManager : MonoBehaviour
                 StartCoroutine(CalculateScore());
                 uIElements.FinishUIElements.gameObject.SetActive(true);
                 uIElements.HighscoreText.gameObject.SetActive(true);
-                uIElements.HighscoreText.text = ((highscore > events.StartupHighscore) ? "<color=yellow>new</color>" : string.Empty) + "Highscore: " + highscore;
+                uIElements.HighscoreText.text = (highscore > events.StartupHighscore ? "<color=yellow>new</color>" : string.Empty) + "Highscore: " + highscore;
                 break;
         }
     }
@@ -167,7 +170,7 @@ public class UIManager : MonoBehaviour
 
             newAnswer.Rect.anchoredPosition = new Vector2(0,offset);
 
-            offset -= (newAnswer.Rect.sizeDelta.y + parameters.Margins);
+            offset -= newAnswer.Rect.sizeDelta.y + parameters.Margins;
             uIElements.AnswersContentArea.sizeDelta = new Vector2(uIElements.AnswersContentArea.sizeDelta.x, offset * -1);
 
             currentAnswer.Add(newAnswer);
